@@ -129,7 +129,7 @@ library
                        ghc-prim          >= 0.5.2    && < 0.14
 
   if flag(Cabal-syntax)
-    build-depends: Cabal-syntax >= 3.7 && < 3.18
+    build-depends: Cabal-syntax >= 3.7 && < 3.20
   else
     build-depends: Cabal        >= 2.2.0.1 && < 2.6
                              || >= 3.0     && < 3.7,
@@ -194,8 +194,8 @@ test-suite TestSuite
                        zlib
 
   if flag(Cabal-syntax)
-    build-depends: Cabal        >= 3.7 && < 3.18,
-                   Cabal-syntax >= 3.7 && < 3.18
+    build-depends: Cabal        >= 3.7 && < 3.20,
+                   Cabal-syntax >= 3.7 && < 3.20
   else
     build-depends: Cabal        >= 2.2.0.1 && < 2.6
                              || >= 3.0     && < 3.7,
