@@ -1,9 +1,13 @@
 See also http://pvp.haskell.org/faq
 
-Unreleased
+0.6.3.3
 -------
+
 * Remove `lukko` package flag. Now we unconditionally use `GHC.IO.Handle.Lock`
   instead of the [`lukko` package](https://hackage.haskell.org/package/lukko).
+* Allow `Cabal-3.18` and `Cabal-syntax-3.18`.
+* Allow building against newer releases of other dependencies.
+* Tested with GHC 8.4 - 9.14.
 
 0.6.3.2
 -------
