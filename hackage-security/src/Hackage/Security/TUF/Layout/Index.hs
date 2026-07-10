@@ -10,9 +10,11 @@ module Hackage.Security.TUF.Layout.Index (
   ) where
 
 import Prelude
+import Data.Char (ord)
 import Data.Kind (Type)
 import Distribution.Package
 import Distribution.Text
+import Distribution.Types.Version (mkVersion)
 
 import Hackage.Security.TUF.Paths
 import Hackage.Security.TUF.Signed
@@ -94,7 +96,9 @@ hackageIndexLayout = IndexLayout {
     fromPath :: IndexPath -> Maybe (Some IndexFile)
     fromPath fp = case splitFragments (unrootPath fp) of
       [pkg, version, _file] -> do
-        pkgId <- simpleParse (pkg ++ "-" ++ version)
+        let pkgName = mkPackageName pkg
+            pkgVersion = mkVersion $ readVersion version
+            pkgId = PackageIdentifier { pkgName, pkgVersion }
         case takeExtension fp of
           ".cabal"   -> return $ Some $ IndexPkgCabal    pkgId
           ".json"    -> return $ Some $ IndexPkgMetadata pkgId
@@ -102,6 +106,17 @@ hackageIndexLayout = IndexLayout {
       [pkg, "preferred-versions"] ->
         Some . IndexPkgPrefs <$> simpleParse pkg
       _otherwise -> Nothing
+
+-- Convert "3.12.1.0" to [3,12,1,0].
+-- Copied from hackage-revdeps package.
+readVersion :: String -> [Int]
+readVersion = (\(acc, _mult, rest) -> acc : rest) . foldr go (0, 1, [])
+  where
+    go c (acc, mult, rest)
+      | fromIntegral d < (10 :: Word) = (acc + d * mult, mult * 10, rest)
+      | otherwise = (0, 1, acc : rest)
+      where
+        d = ord c - ord '0'
 
 {-------------------------------------------------------------------------------
   Utility
