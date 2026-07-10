@@ -15,6 +15,7 @@ import Data.Kind (Type)
 import Distribution.Package
 import Distribution.Text
 import Distribution.Types.Version (mkVersion)
+import System.FilePath.Posix (isPathSeparator)
 
 import Hackage.Security.TUF.Paths
 import Hackage.Security.TUF.Signed
@@ -93,19 +94,27 @@ hackageIndexLayout = IndexLayout {
     fromFragments :: [String] -> IndexPath
     fromFragments = rootPath . joinFragments
 
+    -- This function is called in a hot loop, take care when modifying it.
+    -- Especially avoid 'splitFragments' / 'splitDirectories' and other high-level helpers,
+    -- they are very slow.
     fromPath :: IndexPath -> Maybe (Some IndexFile)
-    fromPath fp = case splitFragments (unrootPath fp) of
-      [pkg, version, _file] -> do
-        let pkgName = mkPackageName pkg
-            pkgVersion = mkVersion $ readVersion version
-            pkgId = PackageIdentifier { pkgName, pkgVersion }
-        case takeExtension fp of
-          ".cabal"   -> return $ Some $ IndexPkgCabal    pkgId
-          ".json"    -> return $ Some $ IndexPkgMetadata pkgId
-          _otherwise -> Nothing
-      [pkg, "preferred-versions"] ->
-        Some . IndexPkgPrefs <$> simpleParse pkg
-      _otherwise -> Nothing
+    fromPath fp = case break isPathSeparator (toUnrootedFilePath (unrootPath fp)) of
+      (pkg, "/preferred-versions") ->
+        return $ Some $ IndexPkgPrefs $ mkPackageName pkg
+      (pkg, rest) -> case break isPathSeparator (drop 1 rest) of
+        (_, []) -> Nothing
+        (version, basename) -> do
+          let pkgName = mkPackageName pkg
+              pkgVersion = mkVersion $ readVersion version
+              pkgId = PackageIdentifier { pkgName, pkgVersion }
+          case reverse basename of
+            -- ".cabal" reversed
+            'l' : 'a' : 'b' : 'a' : 'c' : '.' : _ ->
+              return $ Some $ IndexPkgCabal pkgId
+            -- ".json" reversed
+            'n' : 'o' : 's' : 'j' : '.' : _ ->
+              return $ Some $ IndexPkgMetadata pkgId
+            _ -> Nothing
 
 -- Convert "3.12.1.0" to [3,12,1,0].
 -- Copied from hackage-revdeps package.
